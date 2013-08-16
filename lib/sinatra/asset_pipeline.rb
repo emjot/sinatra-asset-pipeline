@@ -1,6 +1,7 @@
 require 'sprockets'
 require 'sprockets-sass'
 require 'sprockets-helpers'
+require 'sinatra/asset_pipeline/asset_inspector'
 
 module Sinatra
   module AssetPipeline
@@ -12,6 +13,7 @@ module Sinatra
       app.set_default :assets_protocol, :http
       app.set_default :assets_css_compressor, :none
       app.set_default :assets_js_compressor, :none
+      app.set_default :assets_include_gem, []
 
       app.set :static, true
       app.set :assets_digest, true
@@ -19,6 +21,13 @@ module Sinatra
 
       app.configure do
         Dir[File.join app.assets_prefix, "*"].each {|path| app.sprockets.append_path path}
+
+        app.assets_include_gem.each do |gem_name|
+          gem_spec = Gem::Specification.find_by_name(gem_name)
+          gem_path = gem_spec.gem_dir
+
+          AssetInspector.new(gem_path).paths.each {|asset_path| app.sprockets.append_path(asset_path)}
+        end
 
         Sprockets::Helpers.configure do |config|
           config.environment = app.sprockets
